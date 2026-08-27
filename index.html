@@ -98,12 +98,8 @@
                     return;
                 }
 
-                // Získanie verejnej URL adresy fotky
-                const { data: publicUrlData } = supabaseClient.storage
-                    .from('car-images')
-                    .getPublicUrl(fileName);
-
-                imageUrl = publicUrlData.publicUrl;
+                // Priame zostavenie verejnej URL adresy obrázka
+                imageUrl = `https://yznzioyvrocdahagkafh.supabase.co/storage/v1/object/public/car-images/${fileName}`;
             }
 
             // Uloženie textu a odkazu na fotku do tabuľky 'cars'
