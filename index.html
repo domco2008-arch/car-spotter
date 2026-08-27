@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Spotter</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
+        h1 { color: #d9534f; }
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #0275d8; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #025aa5; }
+    </style>
+</head>
+<body onload="loadCars()">
+
+    <h1>🚗 Môj Car Spotter</h1>
+    
+    <div class="card">
+        <h3>Pridať nové auto</h3>
+        <input type="text" id="carName" placeholder="Napr. Škoda Octavia GreenLine">
+        <button onclick="addCar()">Pridať auto</button>
+    </div>
+
+    <h2>Ulovené autá:</h2>
+    <div id="carList"></div>
+
+    <script>
+        async function loadCars() {
+            const response = await fetch('/api/cars');
+            const cars = await response.json();
+            const carList = document.getElementById('carList');
+            carList.innerHTML = '';
+
+            cars.forEach(car => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `<strong>${car.name}</strong><p>Uložené na serveri</p>`;
+                carList.appendChild(card);
+            });
+        }
+
+        async function addCar() {
+            const nameInput = document.getElementById('carName');
+            if (nameInput.value === "") {
+                alert("Napíš názov auta!");
+                return;
+            }
+
+            await fetch('/api/cars', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: nameInput.value })
+            });
+
+            nameInput.value = "";
+            loadCars();
+        }
+    </script>
+</body>
+</html>
