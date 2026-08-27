@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Car Spotter</title>
+    <!-- Knižnica pre Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
         h1 { color: #d9534f; }
@@ -11,6 +13,7 @@
         input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
         button { background: #0275d8; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background: #025aa5; }
+        .car-img { max-width: 100%; height: auto; border-radius: 4px; margin-top: 10px; }
     </style>
 </head>
 <body onload="loadCars()">
@@ -20,42 +23,108 @@
     <div class="card">
         <h3>Pridať nové auto</h3>
         <input type="text" id="carName" placeholder="Napr. Škoda Octavia GreenLine">
+        <input type="file" id="carImage" accept="image/*">
         <button onclick="addCar()">Pridať auto</button>
     </div>
 
     <h2>Ulovené autá:</h2>
-    <div id="carList"></div>
+    <div id="carList">Načítavam z cloudu...</div>
 
     <script>
+        // Tvoje Supabase údaje
+        const SUPABASE_URL = 'https://yznzioyvrocdahagkafh.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_r3CM7XFrfAcC927jiWL8gw_ZN1sopPB';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Funkcia na načítanie áut zo Supabase
         async function loadCars() {
-            const response = await fetch('/api/cars');
-            const cars = await response.json();
             const carList = document.getElementById('carList');
+            
+            const { data: cars, error } = await supabaseClient
+                .from('cars')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) {
+                carList.innerHTML = '<p style="color: red;">Chyba pri načítaní dát.</p>';
+                console.error(error);
+                return;
+            }
+
             carList.innerHTML = '';
+            if (cars.length === 0) {
+                carList.innerHTML = '<p>Zatiaľ žiadne ulovené autá.</p>';
+                return;
+            }
 
             cars.forEach(car => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                card.innerHTML = `<strong>${car.name}</strong><p>Uložené na serveri</p>`;
+                
+                let imgHtml = car.image_url ? `<img src="${car.image_url}" class="car-img">` : '';
+                
+                card.innerHTML = `
+                    <strong>${car.name}</strong>
+                    ${imgHtml}
+                    <p style="font-size: 12px; color: gray; margin-top: 5px;">Uložené v cloude Supabase</p>
+                `;
                 carList.appendChild(card);
             });
         }
 
+        // Funkcia na pridanie auta a nahranie fotky
         async function addCar() {
             const nameInput = document.getElementById('carName');
+            const imageInput = document.getElementById('carImage');
+
             if (nameInput.value === "") {
                 alert("Napíš názov auta!");
                 return;
             }
 
-            await fetch('/api/cars', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: nameInput.value })
-            });
+            let imageUrl = "";
 
-            nameInput.value = "";
-            loadCars();
+            // Ak vybral fotku, najprv ju nahráme do Supabase Storage
+            if (imageInput.files.length > 0) {
+                const file = imageInput.files[0];
+                const fileName = Date.now() + '-' + file.name;
+
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('car-images')
+                    .upload(fileName, file);
+
+                if (uploadError) {
+                    alert("Chyba pri nahrávaní fotky: " + uploadError.message);
+                    return;
+                }
+
+                // Získanie verejnej URL adresy fotky
+                const { data: publicUrlData } = supabaseClient.storage
+                    .from('car-images')
+                    .getPublicUrl(fileName);
+
+                imageUrl = publicUrlData.publicUrl;
+            }
+
+            // Uloženie textu a odkazu na fotku do tabuľky 'cars'
+            const { error } = await supabaseClient
+                .from('cars')
+                .insert([
+                    { 
+                        name: nameInput.value, 
+                        image_url: imageUrl,
+                        user_id: "web-user",
+                        owner_name: "Ja"
+                    }
+                ]);
+
+            if (error) {
+                alert("Chyba pri ukladaní do databázy: " + error.message);
+            } else {
+                nameInput.value = "";
+                imageInput.value = "";
+                loadCars(); // Obnoví zoznam áut na stránke
+            }
         }
     </script>
 </body>
