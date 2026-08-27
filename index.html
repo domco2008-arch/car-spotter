@@ -36,7 +36,7 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_r3CM7XFrfAcC927jiWL8gw_ZN1sopPB';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Funkcia na načítanie áut zo Supabase
+        // Načítanie áut zo Supabase
         async function loadCars() {
             const carList = document.getElementById('carList');
             
@@ -72,7 +72,7 @@
             });
         }
 
-        // Funkcia na pridanie auta a nahranie fotky
+        // Pridanie auta a nahranie fotky do Supabase Storage
         async function addCar() {
             const nameInput = document.getElementById('carName');
             const imageInput = document.getElementById('carImage');
@@ -84,7 +84,6 @@
 
             let imageUrl = "";
 
-            // Ak vybral fotku, najprv ju nahráme do Supabase Storage
             if (imageInput.files.length > 0) {
                 const file = imageInput.files[0];
                 const fileName = Date.now() + '-' + file.name;
@@ -98,11 +97,9 @@
                     return;
                 }
 
-                // Priame zostavenie verejnej URL adresy obrázka
                 imageUrl = `https://yznzioyvrocdahagkafh.supabase.co/storage/v1/object/public/car-images/${fileName}`;
             }
 
-            // Uloženie textu a odkazu na fotku do tabuľky 'cars'
             const { error } = await supabaseClient
                 .from('cars')
                 .insert([
@@ -119,7 +116,7 @@
             } else {
                 nameInput.value = "";
                 imageInput.value = "";
-                loadCars(); // Obnoví zoznam áut na stránke
+                loadCars(); 
             }
         }
     </script>
